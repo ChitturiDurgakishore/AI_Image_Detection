@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Authenticity Scanner</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+--primary:#6366f1;
+--primary-dark:#4f46e5;
+--accent:#ec4899;
+--ai-color:#ef4444;
+--real-color:#10b981;
+--warning:#f59e0b;
+--text-dark:#0f172a;
+--text-light:#64748b;
+--bg-light:#f8fafc;
+--card-shadow:0 20px 50px rgba(0,0,0,.15);
+--border-radius:20px;
+}
+
+body{
+font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+background:linear-gradient(135deg,#1e293b 0%,#0f172a 50%,#1e3a8a 100%);
+min-height:100vh;
+padding:20px;
+}
+
+.header{text-align:center;color:#fff;margin-bottom:40px;padding-top:20px}
+.header h1{font-size:48px;margin-bottom:8px;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header p{opacity:.85;font-size:16px;letter-spacing:.5px}
+
+.main-container{
+max-width:1400px;
+margin:auto;
+display:flex;
+flex-direction:column;
+gap:30px;
+}
+
+.image-preview img{
+transition: transform .4s ease, filter .3s ease;
+}
+.image-preview img:hover{
+transform: scale(1.05);
+filter: brightness(1.1);
+}
+
+.image-section{
+position:relative;
+transition: transform .3s ease, box-shadow .3s ease;
+}
+
+.image-section:hover{
+transform: translateY(-4px);
+box-shadow: 0 25px 60px rgba(0,0,0,.2) !important;
+}
+
+.image-section .section-header h2{
+font-size:22px;
+font-weight:700;
+background:linear-gradient(135deg,var(--primary),var(--accent));
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
+}
+
+/* floating icon badge */
+.image-section .badge-icon{
+position:absolute;
+top:15px;
+right:15px;
+font-size:28px;
+opacity:.6;
+animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+0%, 100% { transform: translateY(0px); }
+50% { transform: translateY(-8px); }
+}
+
+/* TOP ROW IMAGES */
+.top-row{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:30px;
+}
+
+.image-section,.result-section{
+background:#fff;
+border-radius:var(--border-radius);
+padding:30px;
+box-shadow:var(--card-shadow);
+transition: all .3s ease;
+}
+
+.section-header{display:flex;gap:12px;margin-bottom:20px;align-items:center}
+.section-header h2{font-size:20px}
+
+.image-preview{
+width:100%;
+height:350px;
+background:linear-gradient(135deg,#f1f5f9 0%,#e2e8f0 100%);
+border-radius:16px;
+display:flex;
+align-items:center;
+justify-content:center;
+overflow:hidden;
+border:3px solid #e0e7ff;
+transition: all .3s ease;
+}
+
+.image-preview:hover{
+border-color:var(--primary);
+background:linear-gradient(135deg,#e0e7ff 0%,#dbeafe 100%);
+}
+
+.image-preview img{max-width:100%;max-height:100%;object-fit:contain}
+
+.image-preview.empty{color:var(--text-light);font-weight:500}
+
+.result-card{
+padding:25px;
+border-radius:14px;
+border-left:4px solid;
+transition: all .3s ease;
+}
+
+.result-card.ai{
+background:linear-gradient(135deg,#fee2e2 0%,#fecaca 100%);
+border-left-color:var(--ai-color);
+}
+.result-card.real{
+background:linear-gradient(135deg,#dcfce7 0%,#bbf7d0 100%);
+border-left-color:var(--real-color);
+}
+
+.result-card:hover {
+transform: translateX(4px);
+}
+
+.result-badge{
+display:inline-block;
+padding:10px 20px;
+border-radius:25px;
+font-weight:700;
+margin-bottom:15px;
+font-size:14px;
+letter-spacing:.5px;
+}
+.result-card.ai .result-badge{background:var(--ai-color);color:#fff;box-shadow:0 4px 15px rgba(239,68,68,.3)}
+.result-card.real .result-badge{background:var(--real-color);color:#fff;box-shadow:0 4px 15px rgba(16,185,129,.3)}
+
+.result-classification{
+font-size:42px;
+font-weight:800;
+margin-bottom:10px;
+background:linear-gradient(135deg,var(--primary),var(--accent));
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
+}
+
+.detail-section{margin-top:20px;padding-top:15px;border-top:1px solid rgba(0,0,0,.08)}
+.detail-label{font-size:12px;color:var(--text-light);margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.detail-text{font-size:14px;color:var(--text-dark);line-height:1.7}
+
+.file-upload-label{
+display:block;
+padding:40px;
+background:linear-gradient(135deg,#f0f4ff 0%,#f3e8ff 100%);
+border:3px dashed var(--primary);
+border-radius:16px;
+text-align:center;
+cursor:pointer;
+margin-top:15px;
+transition: all .3s ease;
+font-weight:600;
+font-size:16px;
+}
+
+.file-upload-label:hover{
+border-color:var(--accent);
+background:linear-gradient(135deg,#e0e7ff 0%,#ede9fe 100%);
+transform: translateY(-2px);
+}
+
+button{
+width:100%;
+padding:16px;
+background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+color:#fff;
+border:none;
+border-radius:12px;
+font-size:16px;
+font-weight:700;
+margin-top:15px;
+cursor:pointer;
+transition: all .3s ease;
+box-shadow:0 4px 15px rgba(99,102,241,.3);
+letter-spacing:.5px;
+}
+
+button:hover{
+transform: translateY(-2px);
+box-shadow:0 8px 25px rgba(99,102,241,.4);
+}
+
+button:disabled{
+opacity:.7;
+cursor:not-allowed;
+}
+
+#loadingMsg {
+animation: pulse 2s ease-in-out infinite;
+font-weight:600;
+}
+
+@keyframes pulse {
+0%, 100% { opacity: 1; }
+50% { opacity: .6; }
+}
+
+/* mobile */
+@media(max-width:900px){
+.top-row{grid-template-columns:1fr}
+.image-preview{height:260px}
+.header h1{font-size:36px}
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<h1>✨ Image Authenticity Scanner</h1>
+<p>Advanced AI-Powered Detection & Analysis</p>
+</div>
+
+<div class="main-container">
+
+<!-- ROW 1 IMAGES -->
+<div class="top-row">
+
+<div class="image-section">
+<div class="badge-icon">�️</div>
+<div class="section-header"><h2>Original Image</h2></div>
+<div class="image-preview {% if not original_src %}empty{% endif %}" id="imagePreview">
+{% if original_src %}
+<img src="{{ original_src }}" alt="Uploaded">
+{% else %}
+<span>Upload an image to get started</span>
+{% endif %}
+</div>
+</div>
+
+<div class="image-section">
+<div class="badge-icon">🎯</div>
+<div class="section-header"><h2>Detection Results</h2></div>
+<div class="image-preview {% if not circled_src %}empty{% endif %}" id="circledPreview">
+{% if circled_src %}
+<img src="{{ circled_src }}" alt="Detected">
+{% else %}
+<span>Results will appear here</span>
+{% endif %}
+</div>
+</div>
+
+</div>
+
+<!-- UPLOAD FORM -->
+<div class="image-section">
+<form method="post" enctype="multipart/form-data" id="uploadForm">
+{% csrf_token %}
+<input type="file" name="image" id="imageInput" accept="image/*" required hidden>
+<label for="imageInput" class="file-upload-label" id="uploadLabel">� Click or drag to upload image</label>
+<div id="selectedFile" style="margin-top:10px;font-size:14px;color:var(--text-light);font-weight:500;"></div>
+<button type="submit" id="submitBtn">⚡ Analyze Image</button>
+<div id="loadingMsg" style="display:none;margin-top:10px;color:var(--primary);font-size:14px;">⏳ Scanning image...</div>
+</form>
+</div>
+
+<script>
+// show selected file name
+const fileInput = document.getElementById('imageInput');
+const uploadLabel = document.getElementById('uploadLabel');
+const selectedFile = document.getElementById('selectedFile');
+fileInput.addEventListener('change', e=>{
+ if(e.target.files && e.target.files[0]){
+   selectedFile.textContent = `Selected: ${e.target.files[0].name}`;
+   uploadLabel.style.borderColor = 'var(--primary-dark)';   const file = e.target.files[0];
+   const reader = new FileReader();
+   reader.onload = ev => {
+     const preview = document.getElementById('imagePreview');
+     const circledPreview = document.getElementById('circledPreview');
+     preview.innerHTML = `<img src="${ev.target.result}" alt="Preview">`;
+     circledPreview.innerHTML = `<span>Will show after analysis</span>`;
+   };
+   reader.readAsDataURL(file); }
+});
+
+// show loading on submit
+const submitBtn = document.getElementById('submitBtn');
+const loadingMsg = document.getElementById('loadingMsg');
+const uploadFormEl = document.getElementById('uploadForm');
+uploadFormEl.addEventListener('submit',e=>{
+ submitBtn.disabled=true;
+ loadingMsg.style.display='block';
+});
+</script>
+
+<!-- ROW 2 RESULT -->
+<div class="result-section">
+
+{% if error %}
+    <div class="error" style="background:linear-gradient(135deg,#fee2e2 0%,#fecaca 100%);color:#991b1b;padding:15px;border-radius:12px;margin-bottom:20px;border-left:4px solid #ef4444;font-weight:600;">⚠️ {{ error }}</div>
+{% endif %}
+
+<div class="section-header"><h2>📊 Scan Results</h2></div>
+
+{% if result is not None %}
+<div class="result-card {% if result == 'AI' %}ai{% elif result == 'Real' %}real{% else %}{{ '' }}{% endif %}">
+
+<span class="result-badge">
+{% if result == 'AI' %}🤖 AI Generated{% else %}✅ Real Image{% endif %}
+</span>
+
+<div class="result-classification">{{ result }}</div>
+
+{% if analysis %}
+<div class="detail-section">
+<div class="detail-label">📝 Analysis</div>
+<div class="detail-text">{{ analysis }}</div>
+</div>
+{% endif %}
+
+{% if suspicious_regions %}
+<div class="detail-section">
+<div class="detail-label">🔴 Detected Areas</div>
+<div class="detail-text">{{ suspicious_regions }}</div>
+</div>
+{% endif %}
+
+{% if full_response %}
+<div class="detail-section">
+<div class="detail-label">🔧 Technical Details</div>
+<div class="detail-text" style="font-size:12px;color:var(--text-light);white-space:pre-wrap;font-family:monospace;">{{ full_response }}</div>
+</div>
+{% endif %}
+
+</div>
+{% else %}
+<p style="color:var(--text-light);text-align:center;padding:30px;font-size:16px;">Upload and scan an image to see detailed results</p>
+{% endif %}
+
+</div>
+
+</div>
+
+<script>
+const imageInput=document.getElementById('imageInput');
+const preview=document.getElementById('imagePreview');
+const circledPreview=document.getElementById('circledPreview');
+
+imageInput.addEventListener('change',e=>{
+const file=e.target.files[0];
+if(!file)return;
+const reader=new FileReader();
+reader.onload=ev=>{
+preview.innerHTML=`<img src="${ev.target.result}">`;
+circledPreview.innerHTML=`<span style="color:var(--text-light);">Will update after analysis</span>`;
+preview.classList.remove('empty');
+};
+reader.readAsDataURL(file);
+});
+</script>
+
+</body>
+</html>
